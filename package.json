@@ -48,7 +48,7 @@
     "@types/react": "^17.0.80",
     "@types/react-dom": "^17.0.25",
     "@types/three": "^0.148.1",
-    "@vitejs/plugin-react": "^3.1.0",
+    "@vitejs/plugin-react": "^4.3.4",
     "express": "^4.19.2",
     "fs": "0.0.1-security",
     "leva": "^0.9.35",

@@ -76,8 +76,7 @@ export interface Props extends HTMLAttributes<HTMLDivElement> {}
  */
 export const PerfHeadless: FC<PerfProps> = ({ overClock, logsPerSecond, chart, deepAnalyze, matrixUpdate }) => {
   const { gl, scene } = useThree()
-  setPerf({ gl, scene })
-
+  setPerf({ gl, scene }, undefined, gl)
   const PerfLib = useMemo(() => {
     const PerfLib = new GLPerf({
       trackGPU: true,
@@ -85,9 +84,10 @@ export const PerfHeadless: FC<PerfProps> = ({ overClock, logsPerSecond, chart, d
       chartLen: chart ? chart.length : 120,
       chartHz: chart ? chart.hz : 60,
       logsPerSecond: logsPerSecond || 10,
+      renderer: gl,
       gl: gl.getContext(),
       chartLogger: (chart: Chart) => {
-        setPerf({ chart })
+        setPerf({ chart }, undefined, gl)
       },
       paramLogger: (logger: any) => {
         const log = {
@@ -101,8 +101,8 @@ export const PerfHeadless: FC<PerfProps> = ({ overClock, logsPerSecond, chart, d
         }
         setPerf({
           log,
-        })
-        const { accumulated }: any = getPerf()
+        }, undefined, gl)
+        const { accumulated }: any = getPerf(gl)
         const glRender: any = gl.info.render
 
         accumulated.totalFrames++
@@ -133,9 +133,9 @@ export const PerfHeadless: FC<PerfProps> = ({ overClock, logsPerSecond, chart, d
         }
 
         // TODO CONVERT TO OBJECT AND VALUE ALWAYS 0 THIS IS NOT CALL
-        setPerf({ accumulated })
+        setPerf({ accumulated }, undefined, gl)
 
-        emitEvent('log', [log, gl])
+        emitEvent('log'+gl._perfId, [log, gl])
       },
     })
 
@@ -168,11 +168,11 @@ export const PerfHeadless: FC<PerfProps> = ({ overClock, logsPerSecond, chart, d
         renderer: glRenderer,
         vendor: glVendor,
       },
-    })
+    }, undefined, gl)
 
     const callbacks = new Map()
     const callbacksAfter = new Map()
-    Object.defineProperty(THREE.Scene.prototype, 'onBeforeRender', {
+    Object.defineProperty(scene, 'onBeforeRender', {
       get() {
         return (...args: any) => {
           if (PerfLib) {
@@ -187,7 +187,7 @@ export const PerfHeadless: FC<PerfProps> = ({ overClock, logsPerSecond, chart, d
       configurable: true,
     })
 
-    Object.defineProperty(THREE.Scene.prototype, 'onAfterRender', {
+    Object.defineProperty(scene, 'onAfterRender', {
       get() {
         return (...args: any) => {
           if (PerfLib) {
@@ -209,7 +209,7 @@ export const PerfHeadless: FC<PerfProps> = ({ overClock, logsPerSecond, chart, d
     if (PerfLib) {
       PerfLib.overClock = overClock || false
       if (overClock === false) {
-        setPerf({ overclockingFps: false })
+        setPerf({ overclockingFps: false }, undefined, gl)
         overLimitFps.value = 0
         overLimitFps.isOverLimit = 0
       }
@@ -245,8 +245,8 @@ export const PerfHeadless: FC<PerfProps> = ({ overClock, logsPerSecond, chart, d
     if (!gl.info) return
 
     effectSub = addEffect(function preRafR3FPerf() {
-      if (getPerf().paused) {
-        setPerf({ paused: false })
+      if (getPerf(gl).paused) {
+        setPerf({ paused: false }, undefined, gl)
       }
 
       if (window.performance) {
@@ -312,12 +312,12 @@ export const PerfHeadless: FC<PerfProps> = ({ overClock, logsPerSecond, chart, d
           }
         })
 
-        if (programs.size !== getPerf().programs.size) {
+        if (programs.size !== getPerf(gl).programs.size) {
           countGeoDrawCalls(programs)
           setPerf({
             programs: programs,
-            triggerProgramsUpdate: getPerf().triggerProgramsUpdate++,
-          })
+            triggerProgramsUpdate: getPerf(gl).triggerProgramsUpdate++,
+          }, undefined, gl)
         }
       }
     })
@@ -357,7 +357,7 @@ export const PerfHeadless: FC<PerfProps> = ({ overClock, logsPerSecond, chart, d
             totalTime: 0,
             frameCount: 0,
           },
-        })
+        }, undefined, gl)
       }
       return false
     })

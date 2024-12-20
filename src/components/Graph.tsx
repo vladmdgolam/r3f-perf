@@ -8,6 +8,7 @@ import { colorsGraph } from './Perf';
 import * as THREE from 'three';
 import type { PerfUIProps } from '../types';
 import { TextsHighHZ } from './TextsHighHZ';
+import { generateUUID } from 'three/src/math/MathUtils';
 
 export interface graphData {
   curve: THREE.SplineCurve;
@@ -16,7 +17,7 @@ export interface graphData {
 }
 
 
-const ChartCurve:FC<PerfUIProps> = ({colorBlind, minimal, chart= {length: 120, hz: 60}}) => {
+const ChartCurve:FC<PerfUIProps> = ({gl, colorBlind, minimal, chart= {length: 120, hz: 60}}) => {
 
   const curves: any = useMemo(() => {
     return {
@@ -37,7 +38,7 @@ const ChartCurve:FC<PerfUIProps> = ({colorBlind, minimal, chart= {length: 120, h
     let maxVal = 0;
     const {width: w, height: h} = viewport
 
-    const chart = getPerf().chart.data[element];
+    const chart = getPerf(gl).chart.data[element];
     if (!chart || chart.length === 0) {
       return
     }
@@ -45,7 +46,7 @@ const ChartCurve:FC<PerfUIProps> = ({colorBlind, minimal, chart= {length: 120, h
     const paddingTop = minimal ? 12 : 50
     let len = chart.length;
     for (let i = 0; i < len; i++) {
-      let id = (getPerf().chart.circularId + i + 1) % len;
+      let id = (getPerf(gl).chart.circularId + i + 1) % len;
       if (chart[id] !== undefined) {
         if (chart[id] > maxVal) {
           maxVal = chart[id] * factor;
@@ -60,11 +61,11 @@ const ChartCurve:FC<PerfUIProps> = ({colorBlind, minimal, chart= {length: 120, h
   };
 
   // const [supportMemory] = useState(window.performance.memory)
-  useFrame(function updateChartCurve({viewport}) {
+  useFrame(function updateChartCurve({viewport,gl}) {
 
     updatePoints('fps', 1, fpsRef.current, viewport)
     if (fpsMatRef.current) {
-      fpsMatRef.current.color.set(getPerf().overclockingFps ? colorsGraph(colorBlind).overClock.toString() : `rgb(${colorsGraph(colorBlind).fps.toString()})`)
+      fpsMatRef.current.color.set(getPerf(gl).overclockingFps ? colorsGraph(colorBlind).overClock.toString() : `rgb(${colorsGraph(colorBlind).fps.toString()})`)
     }
     updatePoints('gpu', 5, gpuRef.current, viewport)
     // if (supportMemory) {
@@ -139,10 +140,11 @@ export const ChartUI: FC<PerfUIProps> = ({
   showGraph= true,
   antialias= true,
   minimal,
+  gl
 }) => {
   const canvas = useRef<any>(undefined);
-
-  const paused = usePerf((state) => state.paused);
+  const glId = gl._perfId ? gl._perfId : gl._perfId = generateUUID()
+  const paused = usePerf((state) => state[glId].paused, gl);
   return (
     <Graph
       style={{
@@ -182,8 +184,9 @@ export const ChartUI: FC<PerfUIProps> = ({
         {!paused ? (
           <>
             <Renderer />
-            <TextsHighHZ customData={customData} minimal={minimal} matrixUpdate={matrixUpdate} />
+            <TextsHighHZ gl={gl} customData={customData} minimal={minimal} matrixUpdate={matrixUpdate} />
             {showGraph && <ChartCurve
+              gl={gl}
               colorBlind={colorBlind}
               minimal={minimal}
               chart={chart}

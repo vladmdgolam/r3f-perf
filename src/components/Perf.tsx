@@ -24,6 +24,8 @@ import { Toggle, PerfS, PerfIContainer, PerfI, PerfB, ToggleContainer, Container
 import { ProgramsUI } from './Program'
 import { setPerf, usePerf } from '../store'
 import type { PerfPropsGui } from '../types'
+import { useThree } from '@react-three/fiber'
+import { generateUUID } from 'three/src/math/MathUtils'
 
 interface colors {
   [index: string]: string
@@ -40,9 +42,10 @@ export const colorsGraph = (colorBlind: boolean | undefined) => {
   return colors
 }
 
-const DynamicUIPerf: FC<PerfPropsGui> = ({ showGraph, colorBlind }) => {
-  const overclockingFps = usePerf((s) => s.overclockingFps)
-  const fpsLimit = usePerf((s) => s.fpsLimit)
+const DynamicUIPerf: FC<PerfPropsGui> = ({ gl, showGraph, colorBlind }) => {
+  const glId = gl._perfId ? gl._perfId : gl._perfId = generateUUID() as string
+  const overclockingFps = usePerf((s) => s[glId].overclockingFps, gl)
+  const fpsLimit = usePerf((s) => s[glId].fpsLimit, gl)
 
   return (
     <PerfB
@@ -60,8 +63,7 @@ const DynamicUIPerf: FC<PerfPropsGui> = ({ showGraph, colorBlind }) => {
   )
 }
 
-const DynamicUI: FC<PerfPropsGui> = ({ showGraph, colorBlind, customData, minimal }) => {
-  const gl = usePerf((state) => state.gl)
+const DynamicUI: FC<PerfPropsGui> = ({ gl, showGraph, colorBlind, customData, minimal }) => {
 
   return gl ? (
     <PerfIContainer>
@@ -106,7 +108,7 @@ const DynamicUI: FC<PerfPropsGui> = ({ showGraph, colorBlind, customData, minima
       </PerfI> */}
       <PerfI>
         <LapTimerIcon />
-        <DynamicUIPerf showGraph={showGraph} colorBlind={colorBlind} />
+        <DynamicUIPerf gl={gl} showGraph={showGraph} colorBlind={colorBlind} />
       </PerfI>
       {!minimal && gl && (
         <PerfI>
@@ -140,12 +142,14 @@ const PerfUI: FC<PerfPropsGui> = ({
   matrixUpdate,
   openByDefault,
   minimal,
+  gl
 }) => {
   return (
     <>
-      <DynamicUI showGraph={showGraph} colorBlind={colorBlind} customData={customData} minimal={minimal} />
+      <DynamicUI gl={gl} showGraph={showGraph} colorBlind={colorBlind} customData={customData} minimal={minimal} />
       {!minimal && (
         <PerfThree
+          gl={gl}
           matrixUpdate={matrixUpdate}
           openByDefault={openByDefault}
           deepAnalyze={deepAnalyze}
@@ -189,30 +193,31 @@ const InfoUI: FC<PerfPropsGui> = ({ matrixUpdate }) => {
   )
 }
 
-const ToggleEl = ({ tab, title, set }: any) => {
-  const tabStore = usePerf((s: { tab: any }) => s.tab)
+const ToggleEl = ({ gl, tab, title, set }: any) => {
+  const glId = gl._perfId ? gl._perfId : gl._perfId = generateUUID() as string
+  const tabStore = usePerf((s: { tab: any }) => s[glId].tab, gl)
   return (
     <Toggle
       className={`${tabStore === tab ? ' __perf_toggle_tab_active' : ''}`}
       onClick={() => {
         set(true)
-        setPerf({ tab: tab })
+        setPerf({ tab: tab }, undefined, gl)
       }}>
       <span>{title}</span>
     </Toggle>
   )
 }
-const PerfThree: FC<PerfPropsGui> = ({ openByDefault, showGraph, deepAnalyze, matrixUpdate }) => {
+const PerfThree: FC<PerfPropsGui> = ({ gl, openByDefault, showGraph, deepAnalyze, matrixUpdate }) => {
   const [show, set] = React.useState(openByDefault)
 
   return (
     <span>
-      <TabContainers show={show} showGraph={showGraph} matrixUpdate={matrixUpdate} />
+      <TabContainers gl={gl} show={show} showGraph={showGraph} matrixUpdate={matrixUpdate} />
       {openByDefault && !deepAnalyze ? null : (
         <ToggleContainer className={'__perf_toggle'}>
           {/* <ToggleEl tab="inspector" title="Inspector" set={set} /> */}
-          {deepAnalyze && <ToggleEl tab="programs" title="Programs" set={set} />}
-          {deepAnalyze && <ToggleEl tab="infos" title="Infos" set={set} />}
+          {deepAnalyze && <ToggleEl gl={gl} tab="programs" title="Programs" set={set} />}
+          {deepAnalyze && <ToggleEl gl={gl} tab="infos" title="Infos" set={set} />}
           <Toggle
             onClick={() => {
               set(!show)
@@ -233,8 +238,9 @@ const PerfThree: FC<PerfPropsGui> = ({ openByDefault, showGraph, deepAnalyze, ma
   )
 }
 
-const TabContainers = ({ show, showGraph, matrixUpdate }: any) => {
-  const tab = usePerf((state) => state.tab)
+const TabContainers = ({ gl, show, showGraph, matrixUpdate }: any) => {
+  const glId = gl._perfId ? gl._perfId : gl._perfId = generateUUID() as string
+  const tab = usePerf((state) => state[glId].tab, gl)
 
   return (
     <>
@@ -269,7 +275,7 @@ export const Perf: FC<PerfPropsGui> = ({
   minimal,
 }) => {
   const perfContainerRef = useRef(null)
-
+  const gl = useThree((state) => state.gl)
   return (
     <>
       <PerfHeadless
@@ -287,6 +293,7 @@ export const Perf: FC<PerfPropsGui> = ({
           style={{ minHeight: minimal ? '37px' : showGraph ? '100px' : '60px', ...style }}
           ref={perfContainerRef}>
           <ChartUI
+            gl={gl}
             perfContainerRef={perfContainerRef}
             colorBlind={colorBlind}
             chart={chart}
@@ -297,6 +304,7 @@ export const Perf: FC<PerfPropsGui> = ({
             matrixUpdate={matrixUpdate}
           />
           <PerfUI
+            gl={gl}
             colorBlind={colorBlind}
             showGraph={showGraph}
             deepAnalyze={deepAnalyze}

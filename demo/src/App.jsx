@@ -6,6 +6,7 @@ import { useControls } from 'leva'
 
 import { Box, useTexture, Instances, Instance, OrbitControls } from '@react-three/drei'
 import { PerfHeadless, Perf, usePerf, setCustomData } from 'r3f-perf'
+import { generateUUID } from 'three/src/math/MathUtils'
 
 const vertexShader = /* glsl */ `
   varying vec2 vUv;
@@ -58,12 +59,13 @@ const UpdateCustomData = () => {
   // recommended to throttle to 1sec for readability
   const { width } = useThree((s) => s.size)
   const { noUI } = useControls({ noUI: false })
-
-  const [getReport] = usePerf((s) => [s.getReport])
-  console.log(getReport())
+  const gl = useThree((s) => s.gl)
+  const glId = gl._perfId ? gl._perfId : gl._perfId = generateUUID() 
+  const [getReport] = usePerf((s) => [s[glId].getReport], gl)
+  // console.log(getReport())
 
   useFrame(() => {
-    setCustomData(30 + Math.random() * 5)
+    setCustomData(30 + Math.random() * 5, gl)
   })
 
   return noUI ? (
@@ -171,6 +173,9 @@ export function App() {
   return true ? (
     <>
       {/* frameloop={'demand'}  */}
+      <div 
+        style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}
+      >
       <Canvas
         concurrent={'true'}
         gl={{
@@ -228,6 +233,37 @@ export function App() {
         {/* {enable && <UpdateCustomData />} */}
         <UpdateCustomData />
       </Canvas>
+      <Canvas>
+        <Perf
+          className={'override'}
+          showGraph
+          overClock={true}
+          deepAnalyze
+          chart={{
+            hz: 35,
+            length: 60,
+          }}
+          logsPerSecond={10}
+          position="top-right"
+          style={{}}
+          customData={{
+            value: 30,
+            name: 'physic',
+            info: 'fps',
+          }}
+          matrixUpdate
+          // colorBlind={true}
+        />
+        <mesh>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshBasicMaterial color="red" />
+        </mesh>
+        <mesh position={[2, 0, 0]}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshBasicMaterial color="red" />
+        </mesh>
+      </Canvas>
+      </div>
       {/* <PerfHook /> */}
     </>
   ) : null

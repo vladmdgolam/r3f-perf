@@ -1,6 +1,8 @@
 import { createWithEqualityFn } from 'zustand/traditional'
 import { shallow } from 'zustand/shallow'
 import * as THREE from 'three'
+import { generateUUID } from 'three/src/math/MathUtils'
+import { useThree } from '@react-three/fiber'
 
 type drawCount = {
   type: string
@@ -80,17 +82,17 @@ export type State = {
 
 export type ProgramsPerfs = Map<string, ProgramsPerf>
 
-const setCustomData = (customData: number) => {
-  setPerf({ customData })
+const setCustomData = (customData: number, gl) => {
+  setPerf({ customData }, undefined, gl)
 }
 const getCustomData = () => {
   return getPerf().customData
 }
 
-export const usePerfImpl = createWithEqualityFn<State>((set, get): any => {
-  function getReport() {
-    const { accumulated, startTime, infos } = get()
-    const maxMemory = get().log?.maxMemory
+function initDefaultState(get: () => State) {
+  function getReport(glId) {
+    const { accumulated, startTime, infos } = get()[glId]
+    const maxMemory = get()[glId].log?.maxMemory
     const { totalFrames, log, gl, max } = accumulated
 
     const glAverage = {
@@ -176,10 +178,64 @@ export const usePerfImpl = createWithEqualityFn<State>((set, get): any => {
     tab: 'infos',
     getReport,
   }
+}
+
+const usePerfImpl = createWithEqualityFn<State>((set, get): any => {
+  return initDefaultState(get)
 })
 
-const usePerf = <S>(sel: (state: State) => S) => usePerfImpl(sel, shallow)
+const initedGlIds: string[] = []
+
+const usePerf = <S>(sel: (state: State) => S, gl?: THREE.WebGLRenderer) => {
+  if (!(gl instanceof THREE.WebGLRenderer)) {
+    console.warn('usePerf without gl')
+  }
+  const glId = gl ? gl._perfId ? gl._perfId : gl._perfId = generateUUID() : '' as string
+  if (gl)
+    console.log('glId', glId)
+  if (glId && !initedGlIds.includes(glId)) {
+    console.log('init glId', glId, initDefaultState(getState))
+    initedGlIds.push(glId)
+    setState({ [glId]: initDefaultState(getState) })
+  }
+  return usePerfImpl(sel, shallow)
+}
 Object.assign(usePerf, usePerfImpl)
-const { getState: getPerf, setState: setPerf } = usePerfImpl
+const { getState, setState } = usePerfImpl
+
+const setPerf = (partial: State | Partial<State> | ((state: State) => State | Partial<State>), replace?: boolean | undefined, gl?: THREE.WebGLRenderer) => {
+  if (!(gl instanceof THREE.WebGLRenderer)) {
+    console.warn('setPerf without gl')
+  }
+  if (gl) {
+    const glId = gl._perfId ? gl._perfId : gl._perfId = generateUUID() as string
+    setState((s) => {
+      const prevGlState = s[glId] ? s[glId] : initDefaultState(getState)
+      return {
+        [glId]: { ...prevGlState, ...partial }
+      }
+    }, replace)
+  } else {
+    setState(partial, replace)
+  }
+}
+
+const getPerf = (gl?: THREE.WebGLRenderer) => {
+  if (!(gl instanceof THREE.WebGLRenderer)) {
+    console.warn('getPerf without gl')
+  }
+  if (gl) {
+    const glId = gl._perfId ? gl._perfId : gl._perfId = generateUUID() as string
+    if (!initedGlIds.includes(glId)) {
+      console.log('init glId', glId, initDefaultState(getState))
+      initedGlIds.push(glId)
+      setState({ [glId]: initDefaultState(getState) })
+    }
+    return getState()[glId]
+  } else {
+    console.warn('getPerf without gl')
+    return getState()
+  }
+}
 
 export { usePerf, getPerf, setPerf, setCustomData, getCustomData }

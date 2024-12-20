@@ -29,6 +29,7 @@ export interface PerfPropsGui extends PerfProps {
   minimal?: boolean
   className?: string
   style?: object
+  gl?: THREE.WebGLRenderer
 }
 
 export interface PerfUIProps extends HTMLAttributes<HTMLDivElement> {
@@ -40,4 +41,5 @@ export interface PerfUIProps extends HTMLAttributes<HTMLDivElement> {
   customData?: customData
   minimal?: boolean
   matrixUpdate?: boolean
+  gl?: THREE.WebGLRenderer
 }

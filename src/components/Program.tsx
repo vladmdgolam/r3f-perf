@@ -1,4 +1,4 @@
-import { type FC, useEffect, useState } from 'react';
+import { type FC, useEffect, useMemo, useState } from 'react';
 
 import {
   ProgramGeo,
@@ -15,9 +15,11 @@ import {
   ProgramsContainer,
 } from '../styles';
 import { ActivityLogIcon, ButtonIcon, CubeIcon, EyeNoneIcon, EyeOpenIcon, ImageIcon, LayersIcon, RocketIcon, TriangleDownIcon, TriangleUpIcon, VercelLogoIcon } from '@radix-ui/react-icons';
-import { usePerf, type ProgramsPerf } from '../store';
+import { getPerf, usePerf, type ProgramsPerf } from '../store';
 import type { PerfProps } from '../types';
 import { estimateBytesUsed } from '../helpers/estimateBytesUsed';
+import { useThree } from '@react-three/fiber';
+import { generateUUID } from 'three/src/math/MathUtils';
 
 const addTextureUniforms = (id: string, texture: any) => {
   const repeatType = (wrap: number) => {
@@ -65,7 +67,7 @@ const addTextureUniforms = (id: string, texture: any) => {
 };
 
 const UniformsGL = ({ program, material, setTexNumber }: any) => {
-  const gl = usePerf((state) => state.gl);
+  const gl = useThree((state) => state.gl);
   const [uniforms, set] = useState<any | null>(null);
 
   useEffect(() => {
@@ -207,8 +209,9 @@ type ProgramUIProps = {
 };
 
 const DynamicDrawCallInfo = ({ el }: any) => {
-  usePerf((state) => state.log);
-  const gl: any = usePerf((state) => state.gl);
+  const gl = useThree((state) => state.gl);
+  const glId = gl._perfId ? gl._perfId : gl._perfId = generateUUID() as string;
+  usePerf((state) => state[glId].log, gl);
 
   const getVal = (el: any) => {
     if (!gl) return 0;
@@ -396,8 +399,14 @@ const ProgramUI: FC<ProgramUIProps> = ({ el }) => {
 };
 
 export const ProgramsUI: FC<PerfProps> = () => {
-  usePerf((state) => state.triggerProgramsUpdate);
-  const programs:any = usePerf((state) => state.programs);
+  const gl = useThree((state) => state.gl);
+  useMemo(() => {
+    // init the store for this gl
+    getPerf(gl);
+  },[gl])
+  const glId = gl._perfId ? gl._perfId : gl._perfId = generateUUID() as string;
+  usePerf((state) => state[glId].triggerProgramsUpdate, gl);
+  const programs:any = usePerf((state) => state[glId].programs, gl);
   return (
     <ProgramsContainer>
       {programs &&

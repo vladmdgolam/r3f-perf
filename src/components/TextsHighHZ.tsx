@@ -39,16 +39,17 @@ const TextHighHZ: FC<TextHighHZProps> = memo(
     offsetX,
     round,
     hasInstance,
+    gl
   }) => {
     const { width: w, height: h } = useThree((s) => s.viewport)
     const fpsRef = useRef<any>(null)
     const fpsInstanceRef = useRef<any>(null)
 
-    useEvent('log', function updateR3FPerfText([log, gl]) {
+    useEvent('log'+gl._perfId, function updateR3FPerfText([log, gl]) {
       if (!log || !fpsRef.current) return
 
       if (customData) {
-        fpsRef.current.text = (Math.round(getPerf().customData * Math.pow(10, round)) / Math.pow(10, round)).toFixed(
+        fpsRef.current.text = (Math.round(getPerf(gl).customData * Math.pow(10, round)) / Math.pow(10, round)).toFixed(
           round
         )
       }
@@ -66,7 +67,7 @@ const TextHighHZ: FC<TextHighHZProps> = memo(
       }
 
       if (metric === 'fps') {
-        fpsRef.current.color = getPerf().overclockingFps
+        fpsRef.current.color = getPerf(gl).overclockingFps
           ? colorsGraph(colorBlind).overClock.toString()
           : `rgb(${colorsGraph(colorBlind).fps.toString()})`
       }
@@ -145,7 +146,7 @@ const TextHighHZ: FC<TextHighHZProps> = memo(
   }
 )
 
-export const TextsHighHZ: FC<PerfUIProps> = ({ colorBlind, customData, minimal, matrixUpdate }) => {
+export const TextsHighHZ: FC<PerfUIProps> = ({ colorBlind, customData, minimal, matrixUpdate, gl }) => {
   // const [supportMemory] = useState(window.performance.memory)
   // const supportMemory = false
 
@@ -160,6 +161,7 @@ export const TextsHighHZ: FC<PerfUIProps> = ({ colorBlind, customData, minimal, 
         fontSize={fontSize}
         offsetX={140}
         round={0}
+        gl={gl}
       />
       <TextHighHZ
         color={`rgb(${colorsGraph(colorBlind).cpu.toString()})`}
@@ -168,6 +170,7 @@ export const TextsHighHZ: FC<PerfUIProps> = ({ colorBlind, customData, minimal, 
         fontSize={fontSize}
         offsetX={72}
         round={3}
+        gl={gl}
       />
       {/* <TextHighHZ color={supportMemory ? `rgb(${colorsGraph(colorBlind).cpu.toString()})` : ''} isPerf metric='maxMemory' fontSize={8} offsetX={112} offsetY={10} round={0} /> */}
       <TextHighHZ
@@ -177,16 +180,17 @@ export const TextsHighHZ: FC<PerfUIProps> = ({ colorBlind, customData, minimal, 
         fontSize={fontSize}
         offsetX={10}
         round={3}
+        gl={gl}
       />
       {!minimal ? (
         <>
-          <TextHighHZ metric="calls" fontSize={fontSize} offsetX={200} round={0} hasInstance />
-          <TextHighHZ metric="triangles" fontSize={fontSize} offsetX={260} round={0} hasInstance />
-          <TextHighHZ isMemory metric="geometries" fontSize={fontSize} offsetY={30} offsetX={0} round={0} />
-          <TextHighHZ isMemory metric="textures" fontSize={fontSize} offsetY={30} offsetX={80} round={0} />
-          <TextHighHZ isShadersInfo metric="programs" fontSize={fontSize} offsetY={30} offsetX={140} round={0} />
-          <TextHighHZ metric="lines" fontSize={fontSize} offsetY={30} offsetX={200} round={0} hasInstance />
-          <TextHighHZ metric="points" fontSize={fontSize} offsetY={30} offsetX={260} round={0} hasInstance />
+          <TextHighHZ metric="calls" fontSize={fontSize} offsetX={200} round={0} hasInstance gl={gl} />
+          <TextHighHZ metric="triangles" fontSize={fontSize} offsetX={260} round={0} hasInstance gl={gl} />
+          <TextHighHZ isMemory metric="geometries" fontSize={fontSize} offsetY={30} offsetX={0} round={0} gl={gl} />
+          <TextHighHZ isMemory metric="textures" fontSize={fontSize} offsetY={30} offsetX={80} round={0} gl={gl} />
+          <TextHighHZ isShadersInfo metric="programs" fontSize={fontSize} offsetY={30} offsetX={140} round={0} gl={gl} />
+          <TextHighHZ metric="lines" fontSize={fontSize} offsetY={30} offsetX={200} round={0} hasInstance gl={gl} />
+          <TextHighHZ metric="points" fontSize={fontSize} offsetY={30} offsetX={260} round={0} hasInstance gl={gl} />
           {matrixUpdate && (
             <TextHighHZ
               isPerf
@@ -196,6 +200,7 @@ export const TextsHighHZ: FC<PerfUIProps> = ({ colorBlind, customData, minimal, 
               offsetX={320}
               round={0}
               hasInstance
+              gl={gl}
             />
           )}
         </>
@@ -209,6 +214,7 @@ export const TextsHighHZ: FC<PerfUIProps> = ({ colorBlind, customData, minimal, 
           offsetY={0}
           offsetX={minimal ? 200 : 320}
           round={customData.round || 2}
+          gl={gl}
         />
       )}
     </>

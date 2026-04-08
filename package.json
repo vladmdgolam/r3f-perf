@@ -40,7 +40,6 @@
     "dev": "vite",
     "dev:server": "node demo/server.mjs",
     "build": "vite build && tsc",
-    "prepare": "vite build && tsc",
     "serve": "vite serve"
   },
   "devDependencies": {
